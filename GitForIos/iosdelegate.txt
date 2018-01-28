@@ -1,0 +1,51 @@
+代理模式的使用场合
+当一个类的某些功能需要被别人来实现，但是既不明确是些什么功能，又不明确谁来实现这些功能的时候，委托模式就可以派上用场。例如你可以再写个类，实现也是完全可以的。换谁来，只要它实现了这个方法，我就可以委托它来做这个事。说到底一切都是为了使类之间的耦合性更松散。好的代码应该对扩展开放，对修改关闭。
+
+事例
+1.委托者的.h文件中的代理指定以及声明
+#import <UIKit/UIKit.h>
+#import "LeftBarModel.h"
+@protocol LeftBodyCellDelegate <NSObject>
+// 由于这里没有任何修饰词所以是默认的代理方法，切记默认的代理方法，如果遵守了协议那就必须实现 
+/**
+*  @Description item选中跳转对应的控制器 
+*  @param 被点击的按钮
+*/
+- (void)selectedItemButton:(NSInteger)index;
+// 只是为了演示这儿是想说明下边这个方法是可选的就是可以实现也可以不实现
+@optional
+- (void)optionalFouction;
+@end
+@interface LeftBodyTableViewCell : UITableViewCell
+// 在这里定义一个属性，注意这里的修饰词要用weak
+@property(nonatomic,weak)id<LeftBodyCellDelegate>   leftBodyCellDelegate;
+@end
+2.委托者的.m文件中调用代理中的方法
+// 这里解释下：我的这个委托者是定制的cell这里包含了一个按钮，按钮的点击事件在cell里我打算用代理传递出去给控制器，所以这是个按钮的点击响应事件
+- (void)itemButonClick:(UIButton *)button
+{
+// 这里的self.leftBodyCellDelegate是判断一下控制器有没有遵守协议设置代理
+// [self.leftBodyCellDelegate respondsToSelector:@selector(selectedItemButton:)]这个是判断有没有实现这个代理方法
+// 当两个条件都满足了就可以调用代理方法了
+  if (self.leftBodyCellDelegate && [self.leftBodyCellDelegate respondsToSelector:@selector(selectedItemButton:)])
+  {
+// 调用代理方法
+      [self.leftBodyCellDelegate selectedItemButton:button.tag - 1000];
+  }
+}
+3.代理控制器中的代码
+// 首先是要遵守这个协议
+@interface RootViewController ()<UITableViewDelegate,UITableViewDataSource,LeftBodyCellDelegate>
+// 然后是要设置代理，在创建cell时候要设置代理人为控制器
+cell.leftBodyCellDelegate = self;
+4.实现协议中规定的方法了
+#pragma mark --------------- LeftBodyCellDelegate
+- (void)selectedItemButton:(NSInteger)index
+{
+// 这里是你点击了cell里的某个按钮后要做的操作
+}
+
+作者：码农小白
+链接：https://www.jianshu.com/p/c2c8a8bea976
+來源：简书
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。

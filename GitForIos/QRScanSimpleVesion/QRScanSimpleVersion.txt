@@ -1,0 +1,537 @@
+iOS开发_原生二维码生成与读取
+96  Coder_Sun 
+2016.12.29 17:49* 字数 335 阅读 210评论 0喜欢 3
+** 实现梦想没那么伟大，80%的人只是输给了半途而废。—— CoderSun **
+
+今天有时间整理下原生的二维码的生成与读取。
+
+准备工作
+导入<CoreImage/CoreImage.h>，生成二维码用
+导入<AVFoundation/AVFoundation.h>，读取二维码用
+协议AVCaptureMetadataOutputObjectsDelegate，这是有关摄像设备输出的相关代理
+注意：扫描二维码的时候，要在info.plist文件中添加字段，否则会崩溃（iOS10之后的隐私权限问题）
+
+<key>NSPhotoLibraryUsageDescription</key>
+<string>App需要您的同意,才能访问相册</string>
+
+<key>NSCameraUsageDescription</key>
+<string>App需要您的同意,才能访问相机</string>
+二维码的生成
+1.生成二维码的步骤：
+1)导入CoreImage框架
+2)通过滤镜CIFilter生成二维码
+代码如下
+调用下方根据字符串生成二维码的方法即可获得二维码
+ // 生成二维码
+- (UIImage *)createImageWithString:(NSString *)string{
+
+// 1.实例化二维码滤镜
+CIFilter *filter = [CIFilter filterWithName:@"CIQRCodeGenerator"];
+// 2.恢复滤镜的默认属性（因为滤镜可能保存上一次的属性）
+[filter setDefaults];
+
+// 3.讲字符串转换为NSData
+NSData *data = [string dataUsingEncoding:NSUTF8StringEncoding];*
+
+// 4.通过KVO设置滤镜inputMessage数据
+[filter setValue:data forKey:@"inputMessage"];
+
+// 5.通过了滤镜输出的图像
+CIImage *outputImage = [filter outputImage];
+
+// 6.因为生成的二维码模糊，所以通过createNonInterpolatedUIImageFormCIImage:outputImage来获得高清的二维码图片
+
+UIImage *image = [self getErWeiMaImageFormCIImage:outputImage withSize:200];
+
+return image;   
+}
+// 获取高清二维码图片
+- (UIImage *)getErWeiMaImageFormCIImage:(CIImage *)image withSize:(CGFloat) size {
+CGRect extent = CGRectIntegral(image.extent);
+CGFloat scale = MIN(size/CGRectGetWidth(extent), size/CGRectGetHeight(extent));
+
+// 1.创建bitmap;
+size_t width = CGRectGetWidth(extent) * scale;
+size_t height = CGRectGetHeight(extent) * scale;
+CGColorSpaceRef cs = CGColorSpaceCreateDeviceGray();
+CGContextRef bitmapRef = CGBitmapContextCreate(nil, width, height, 8, 0, cs, (CGBitmapInfo)kCGImageAlphaNone);
+CIContext *context = [CIContext contextWithOptions:nil];
+CGImageRef bitmapImage = [context createCGImage:image fromRect:extent];
+CGContextSetInterpolationQuality(bitmapRef, kCGInterpolationNone);
+CGContextScaleCTM(bitmapRef, scale, scale);
+CGContextDrawImage(bitmapRef, extent, bitmapImage);
+
+// 2.保存bitmap到图片
+CGImageRef scaledImage = CGBitmapContextCreateImage(bitmapRef);
+CGContextRelease(bitmapRef);
+CGImageRelease(bitmapImage);
+return [UIImage imageWithCGImage:scaledImage];
+}
+运行结果
+生成的二维码生成的二维码
+????????????我是可爱的分割线????????????
+
+二维码的生成还是比较简单的，下面让我们来看下二维码的扫描
+????????????我是可爱的分割线????????????
+
+二维码的读取
+1.读取二维码的步骤：
+1)读取二维码需要导入AVFoundation框架（上方准备工作的时候已经说了）
+2)利用相机识别二维码中的内容（只能是真机）
+3)会话将相机采集到的二维码图像转换成字符串数据
+2.原生扫描中用到的几个类
+AVCaptureDevice                        // 拍摄设备
+AVCaptureDeviceInput                   // 输入设备
+AVCaptureMetadataOutput                // 元数据输出
+AVCaptureSession                       // 拍摄会话
+AVCaptureVideoPreviewLayer             // 视频预览图层
+代码如下
+- (void)readQRCode{
+
+// 1.实例化拍摄装备
+AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+
+// 2.设置输入设备
+AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:device error:nil];
+
+// 3.设置元数据输出
+AVCaptureMetadataOutput *output = [[AVCaptureMetadataOutput alloc] init];
+[output setMetadataObjectsDelegate:self queue:dispatch_get_main_queue()];   // 设置代理
+
+// 4.添加拍摄会话
+self.session = [[AVCaptureSession alloc] init];
+[self.session addInput:input];       // 添加会话输入
+[self.session addOutput:output];     // 添加会话输出
+
+[output setMetadataObjectTypes:@[AVMetadataObjectTypeQRCode]];      // 设置输出数据类型（需要将元数据输出添加到会话后才能制定元数据类型，否则会报错）
+
+// 5.视频预览图层
+self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:_session]; // 传递session是为了告诉图层将来显示什么内容
+self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;   // 显示方式
+// 设置videoGravity,顾名思义就是视频播放时的拉伸方式,默认是AVLayerVideoGravityResizeAspect
+// AVLayerVideoGravityResizeAspect 保持视频的宽高比并使播放内容自动适应播放窗口的大小。
+// AVLayerVideoGravityResizeAspectFill 和前者类似，但它是以播放内容填充而不是适应播放窗口的大小。最后一个值会拉伸播放内容以适应播放窗口.
+// 因为考虑到全屏显示以及设备自适应,这里我们采用fill填充
+
+self.previewLayer.frame = self.view.bounds;
+[self.view.layer insertSublayer:self.previewLayer atIndex:0]; // 将图层插入当前图层
+
+// 6.启动会话
+[self.session startRunning];
+}
+AVCaptureMetadataOutputObjectsDelegate 的代理方法
+/**
+ 扫描结果处理
+
+ @param captureOutput 输出数据源
+ @param metadataObjects 扫描结果数组
+ @param connection 用于协调输入与输出之间的数据流
+ */
+- (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection{
+
+// 1.判断扫描结果的数据是否存在
+if ([metadataObjects count] > 0) {
+    // 2.如果存在数据，则停止会话
+    [self.session stopRunning];
+    // 3.删除预览图层
+    [self.previewLayer removeFromSuperlayer];
+    
+    AVMetadataMachineReadableCodeObject *metadataObject = metadataObjects[0];
+    
+    // AVMetadataMachineReadableCodeObject 是AVMetadataObject的具体子类定义的特性检测一维或二维条形码。
+    // AVMetadataMachineReadableCodeObject代表一个单一的照片中发现机器可读的代码。这是一个不可变对象描述条码的特性和载荷。
+    // 在支持的平台上,AVCaptureMetadataOutput输出检测机器可读的代码对象的数组
+    
+    NSString *stringValue = metadataObject.stringValue;
+    
+    if ([stringValue containsString:@"http"]) {
+        
+        // 如果是字符串，则打开连接
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:stringValue] options:[NSDictionary dictionary] completionHandler:^(BOOL success) {
+            
+            if (success) {
+                NSLog(@"成功");
+            }
+        }];
+    }else{
+        NSLog(@"普通字符串：%@",stringValue);     // 可以将字符串放到需要用到的地方（比如label）
+     }
+   }
+ }
+ 
+ 
+ 
+ （ 一 ）高清二维码
+
+系统二维码主要通过  CIFilter  的对象来完成, 当然首先我们需要先导入这个类所在的框架，并实现下面的代码
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+#import <CoreImage/CoreImage.h>
+ 
+   // 1.创建过滤器 -- 苹果没有将这个字符定义为常量
+  CIFilter *filter = [CIFilter filterWithName:@"CIQRCodeGenerator"];
+    
+   // 2.过滤器恢复默认设置
+   [filter setDefaults];
+   
+  // 3.给过滤器添加数据(正则表达式/帐号和密码) -- 通过KVC设置过滤器,只能设置NSData类型
+  NSString *dataString = @"http://www.baidu.com";
+  NSData *data = [dataString dataUsingEncoding:NSUTF8StringEncoding];
+  [filter setValue:data forKeyPath:@"inputMessage"];
+   
+  // 4.获取输出的二维码
+  CIImage *outputImage = [filter outputImage];
+   
+  // 5.显示二维码
+  UIImage *image = [UIImage imageWithCIImage:outputImage];
+　　
+
+
+通过上面这种最简单的方式 生成的二维码很模糊，而且二维码的大小也不方便控制，
+
+对于我们来说，需求的是一张 能控制大小，并且高清显示的二维码，因此我们需要用一种方式 将CIImage 转为我们心目中那个UIImage
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+/** 根据CIImage生成指定大小的UIImage */
++ (UIImage *)createNonInterpolatedUIImageFormCIImage:(CIImage *)image withSize:(CGFloat)size {
+    CGRect extent = CGRectIntegral(image.extent);
+    CGFloat scale = MIN(size/CGRectGetWidth(extent), size/CGRectGetHeight(extent));
+     
+    // 1.创建bitmap;
+    size_t width = CGRectGetWidth(extent) * scale;
+    size_t height = CGRectGetHeight(extent) * scale;
+    CGColorSpaceRef cs = CGColorSpaceCreateDeviceGray();
+    CGContextRef bitmapRef = CGBitmapContextCreate(nil, width, height, 8, 0, cs, (CGBitmapInfo)kCGImageAlphaNone);
+    CIContext *context = [CIContext contextWithOptions:nil];
+    CGImageRef bitmapImage = [context createCGImage:image fromRect:extent];
+    CGContextSetInterpolationQuality(bitmapRef, kCGInterpolationNone);
+    CGContextScaleCTM(bitmapRef, scale, scale);
+    CGContextDrawImage(bitmapRef, extent, bitmapImage);
+     
+    // 2.保存bitmap到图片
+    CGImageRef scaledImage = CGBitmapContextCreateImage(bitmapRef);
+    CGContextRelease(bitmapRef);
+    CGImageRelease(bitmapImage);
+    return [UIImage imageWithCGImage:scaledImage];
+}
+
+
+（ 二 ）彩色二维码 
+在使用过程中发现了个问题， 就是当我们使用一个长度过长的字段 去生成高清二维码的时候，这个二维码 就会变得非常密集、浓稠， 用手机来扫描的时候，由于手机摄像头像素问题很难读取到这个二维码，因此我需要一个 彩色二维码来增加它的辨识度。
+
+ 
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+// 1、创建滤镜对象
+CIFilter *filter = [CIFilter filterWithName:@"CIQRCodeGenerator"];
+ 
+// 恢复滤镜的默认属性
+[filter setDefaults];
+ 
+// 2、设置数据
+NSString *string_data = @"http://www.baidu.com";
+NSData *qrImageData = [string_data dataUsingEncoding:NSUTF8StringEncoding];
+ 
+// 设置过滤器的输入值, KVC赋值
+[filter setValue:qrImageData forKey:@"inputMessage"];
+ 
+// 3、获得滤镜输出的图像
+CIImage *outputImage = [filter outputImage];
+ 
+// 图片小于(27,27),我们需要放大
+outputImage = [outputImage imageByApplyingTransform:CGAffineTransformMakeScale(9, 9)];
+ 
+ 
+// 4、创建彩色过滤器(彩色的用的不多)
+CIFilter * color_filter = [CIFilter filterWithName:@"CIFalseColor"];
+ 
+// 设置默认值
+[color_filter setDefaults];
+ 
+// 5、KVC 给私有属性赋值
+[color_filter setValue:outputImage forKey:@"inputImage"];
+ 
+// 6、需要使用 CIColor 为背景颜色 和 主颜色 上色
+// inputColor0：背景颜色 ，inputColor1 主颜色
+// 注意不要使用 [CIColor redColor][CIColor blueColor]，这些类似于UIColor的方法只有在iOS 10系统才有
+[color_filter setValue:[CIColor colorWithRed:1 green:1 blue:1] forKey:@"inputColor0"];
+[color_filter setValue:[CIColor colorWithRed:0 green:0 blue:1] forKey:@"inputColor1"];
+ 
+// 7、设置输出
+CIImage *colorImage = [color_filter outputImage];
+ 
+//8、输出UIImage
+UIImage *image = [UIImage imageWithCIIimage:colorImage];
+ 
+
+　　
+
+扫描二维码
+
+ 扫描主要使用的是AVFoundation 使用起来也非常的简单 ，通过设置<AVCaptureMetadataOutputObjectsDelegate>代理可以监听扫描到的二维码中的信息
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+#import "ViewController.h"
+#import <AVFoundation/AVFoundation.h>
+ 
+@interface ViewController () <AVCaptureMetadataOutputObjectsDelegate>
+/// 会话对象
+@property (nonatomic, strong) AVCaptureSession *session;
+/// 图层类
+@property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
+ 
+@end
+ 
+@implementation ViewController
+ 
+- (void)viewDidLoad {
+    [super viewDidLoad];
+}
+ 
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+ // 1、获取摄像设备
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+     
+    // 2、创建输入流
+    AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:device error:nil];
+     
+    // 3、创建输出流
+    AVCaptureMetadataOutput *output = [[AVCaptureMetadataOutput alloc] init];
+     
+    // 4、设置代理 在主线程里刷新
+    [output setMetadataObjectsDelegate:self queue:dispatch_get_main_queue()];
+     
+    // 设置扫描范围(每一个取值0～1，以屏幕右上角为坐标原点)
+    // 注：微信二维码的扫描范围是整个屏幕，这里并没有做处理（可不用设置）
+    output.rectOfInterest = CGRectMake(0.05, 0.2, 0.7, 0.6);
+     
+    // 5、初始化链接对象（会话对象）
+    self.session = [[AVCaptureSession alloc] init];
+    // 高质量采集率
+    [_session setSessionPreset:AVCaptureSessionPresetHigh];
+     
+    // 5.1 添加会话输入
+    [_session addInput:input];
+     
+    // 5.2 添加会话输出
+    [_session addOutput:output];
+     
+    // 6、设置输出数据类型，需要将元数据输出添加到会话后，才能指定元数据类型，否则会报错
+    // 设置扫码支持的编码格式(如下设置条形码和二维码兼容)
+    output.metadataObjectTypes = @[AVMetadataObjectTypeQRCode, AVMetadataObjectTypeEAN13Code,  AVMetadataObjectTypeEAN8Code, AVMetadataObjectTypeCode128Code];
+     
+    // 7、实例化预览图层, 传递_session是为了告诉图层将来显示什么内容
+    self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:_session];
+    _previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+    _previewLayer.frame = self.view.layer.bounds;
+     
+    // 8、将图层插入当前视图
+    [self.view.layer insertSublayer:_previewLayer atIndex:0];
+     
+    // 9、启动会话
+    [_session startRunning];
+}
+ 
+#pragma mark - 获取扫描结果
+- (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection
+{
+    if (metadataObjects.count > 0) {
+        AVMetadataMachineReadableCodeObject *object = [metadataObjects lastObject];
+        NSLog(@"%@", object.stringValue);
+    }
+}
+ 
+@end
+ AVCaptureMetadataOutput 有个属性 rectOfInterest 他是用来控制你屏幕扫描的范围的，默认是按照整个屏幕来扫描，rectOfInterest的值的范围都是0-1 是按比例取值而不是实际尺寸 不过其实也很简单 只要换算一下就好了 ，这里唯一要注意的一点是 rectOfInterest 都是按照横屏来计算的 所以当竖屏的情况下 x轴和y轴要交换一下
+
+ 
+
+读取二维码 
+
+读取主要用到CoreImage 不过要强调的是读取二维码的功能只有在iOS8之后才支持，读取的代码也非常的简单
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+//首先拿到  我们需要读取的那个图片
+UIImage * srcImage = qrcodeImage;
+ 
+CIContext *context = [CIContext contextWithOptions:nil];
+ 
+ // CIDetector(CIDetector可用于人脸识别)进行图片解析，声明一个CIDetector，并设定识别类型 CIDetectorTypeQRCode
+CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:context options:@{CIDetectorAccuracy:CIDetectorAccuracyHigh}];
+ 
+CIImage *image = [CIImage imageWithCGImage:srcImage.CGImage];
+ 
+    // 取得识别结果是个数组
+    NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage:image.CGImage]];
+    for (int index = 0; index < [features count]; index ++) {
+        CIQRCodeFeature *feature = [features objectAtIndex:index];
+        //这个String就是我们从二维码中获取到的信息
+        NSString *scannedResult = feature.messageString;
+}
+　　
+
+ 

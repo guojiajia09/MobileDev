@@ -1,0 +1,134 @@
+ <!doctype html>
+
+<html lang="zh">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <title>抽奖活动</title>
+
+  <style>
+
+*{
+
+margin:0;padding:0;
+
+}
+
+#title{
+
+color:red;text-align:center;margin:0 auto;width:240px;height:70px;padding-top:10px;background:opacity(0);
+
+}
+
+.btns{
+
+width:190px;height:30px;margin:0px auto;
+
+}
+
+ 
+
+.btns span{
+
+display:block;float:left;width:80px;height:28px;text-align:center;background:#036;color:#fff;cursor:pointer;border:1px solid #eee;border-radius:8px;font-family:"微软雅黑";font-size:14px;line-height:28px;margin-right:10px;
+
+}
+
+#txt{
+
+font-size:14px;color:#ccc999;text-align:center;margin:0 auto;width:190px;height:50px;padding-top:10px;
+
+}
+
+  </style>
+
+  <script>
+
+var mytype=["iPhone6s","iPad Air2","DELL外星人","键鼠套装","1000元超市购物卡","200元话费充值卡","谢谢参与","品牌耳机","港澳台7日游","50元优惠券"],//定义奖品池
+
+   timer=null,
+
+   count=0;
+
+
+
+ 
+
+//点击开始，标题栏开始轮动
+
+function startFun(){
+
+  clearInterval(timer);//开始时，清除计时器，避免二次触发
+  var title = document.getElementById("title");
+ 
+
+  timer = setInterval(function(){
+
+    var num= Math.floor(Math.random()*mytype.length);
+
+    title.innerHTML=mytype[num];
+
+  },50);
+
+
+ 
+
+ }
+
+//点击停止，标题栏停止轮动并输出轮动结果
+
+function stopFun(){
+
+
+ 
+
+
+  clearInterval(timer);//清除计时器，停止计时器
+  var title = document.getElementById("title");
+  title.innerHTML=title;
+
+
+}
+
+ 
+
+  
+
+  </script>
+
+<body>
+
+<div>
+
+<h2 id="title">开始抽奖！</h2>
+
+</div>
+
+<div class="btns">
+
+<span id="start">开始</span>
+
+<span id="stop">停止</span>
+
+</div>
+
+<div id="txt">支持回车键(Enter)开始/停止。</div>
+
+
+
+</body>
+<body onload="clickButton()">
+<form>
+<input type="button" id="button1" onclick ="startFun()" value="开始" />
+</form>
+<form>
+<input type="button" id="button2" onclick ="stopFun()" value="停止" />
+<input type="button" id="button2" onclick ="stopFun()" value="DING" />
+
+<button> dfsdj</button>
+</form>
+</body>
+
+</html>

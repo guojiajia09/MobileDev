@@ -1,0 +1,601 @@
+在我们的生活中现在很多App大多都可以获取地理位置进行相关的定位标记等,有的例如餐饮App,当我们需要订餐时,我们需要知道商家的地理位置,以方便我们能够知道送餐人员大概需要多久可以将食物送到我们面前,当我们需要查找某个餐厅的时候,我们只需要在搜索框中搜索相应的店名,我们的App就能迅速的在地图上帮我们标注出来,以方便我们查看,当我们需要去一个陌生的地方的时候,我们可以很轻松的通过导航功能,去往我们想要去得任何地方,而这些都得益于苹果为我们提供的定位服务。
+首先要实现地图、导航功能，就需要我们先熟悉定位功能，在iOS中通过Core Location框架进行定位操作。Core Location自身可以单独使用，和地图开发框架MapKit完全是独立的，但是往往地图开发要配合定位框架使用。在Core Location中主要包含了定位、地理编码（包括反编码）功能。
+由于目前苹果iOS系统最新版本为9.1,苹果自iOS8以后如果要使用定位服务,需要我们在plist文件中多添加两个字段,其实就是提示用户授权的用的,就是以下两个字段:
+ NSLocationWhenInUseUsageDescription  当用户使用的允许        
+ NSLocationAlwaysUsageDescription     总是允许
+ 
+定位服务授权状态枚举类型说明:
+  //定位服务授权状态，返回枚举类型：
+    //kCLAuthorizationStatusNotDetermined： 用户尚未做出决定是否启用定位服务
+    //kCLAuthorizationStatusRestricted： 没有获得用户授权使用定位服务,可能用户没有自己禁止访问授权
+    //kCLAuthorizationStatusDenied ：用户已经明确禁止应用使用定位服务或者当前系统定位服务处于关闭状态
+    //kCLAuthorizationStatusAuthorizedAlways： 应用获得授权可以一直使用定位服务，即使应用不在使用状态
+    //kCLAuthorizationStatusAuthorizedWhenInUse： 使用此应用过程中允许访问定位服务
+
+获取当前位置
+ViewController.m
+
+#import "ViewController.h"
+#import <CoreLocation/CoreLocation.h>
+
+@interface ViewController ()<CLLocationManagerDelegate>
+@property (nonatomic,strong)CLLocationManager *locationManager;
+@end
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    //初始化locationManger管理器对象
+    CLLocationManager *locationManager=[[CLLocationManager alloc]init];
+    self.locationManager=locationManager;
+    
+    //判断当前设备定位服务是否打开
+    if (![CLLocationManager locationServicesEnabled]) {
+        NSLog(@"设备尚未打开定位服务");
+    }
+
+    //判断当前设备版本大于iOS8以后的话执行里面的方法
+    if ([UIDevice currentDevice].systemVersion.floatValue >=8.0) {
+        //持续授权
+        [locationManager requestAlwaysAuthorization];
+        //当用户使用的时候授权
+        [locationManager requestWhenInUseAuthorization];
+    }
+    
+    //或者使用这种方式,判断是否存在这个方法,如果存在就执行,没有的话就忽略
+    //if([locationManager respondsToSelector:@selector(requestWhenInUseAuthorization)]){
+    //   [locationManager requestWhenInUseAuthorization];
+    //}
+    
+    //设置代理
+    locationManager.delegate=self;
+    //设置定位的精度
+    locationManager.desiredAccuracy=kCLLocationAccuracyBest;
+    //设置定位的频率,这里我们设置精度为10,也就是10米定位一次
+    CLLocationDistance distance=10;
+    //给精度赋值
+    locationManager.distanceFilter=distance;
+    //开始启动定位
+    [locationManager startUpdatingLocation];
+
+}
+//当位置发生改变的时候调用(上面我们设置的是10米,也就是当位置发生>10米的时候该代理方法就会调用)
+- (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray<CLLocation *> *)locations{
+    //取出第一个位置
+    CLLocation *location=[locations firstObject];
+    NSLog(@"%@",location.timestamp);
+    //位置坐标
+    CLLocationCoordinate2D coordinate=location.coordinate;
+    NSLog(@"经度：%f,纬度：%f,海拔：%f,航向：%f,速度：%f",coordinate.longitude,coordinate.latitude,location.altitude,location.course,location.speed);
+    //如果不需要实时定位，使用完即使关闭定位服务
+    //[_locationManager stopUpdatingLocation];
+}
+
+
+2015-11-29 13:02:48.380 地图定位[1022:55837] 2015-11-29 05:02:06 +0000
+2015-11-29 13:02:48.381 地图定位[1022:55837] 您的当前位置:经度：-116.206410,纬度：39.285834,海拔：0.000000,航向：-1.000000,速度：-1.000000
+2015-11-29 13:02:48.383 地图定位[1022:55837] 2015-11-29 05:02:48 +0000
+2015-11-29 13:02:48.383 地图定位[1022:55837] 您的当前位置:经度：-116.206410,纬度：39.285834,海拔：0.000000,航向：-1.000000,速度：-1.000000
+2015-11-29 13:03:03.081 地图定位[1022:55837] 2015-11-29 05:03:03 +0000
+2015-11-29 13:03:03.081 地图定位[1022:55837] 您的当前位置:经度：-116.306410,纬度：39.285834,海拔：0.000000,航向：-1.000000,速度：-1.000000
+2015-11-29 13:03:34.226 地图定位[1022:55837] 2015-11-29 05:03:34 +0000
+2015-11-29 13:03:34.226 地图定位[1022:55837] 您的当前位置:经度：-116.406400,纬度：39.285834,海拔：0.000000,航向：-1.000000,速度：-1.000000
+2015-11-29 13:03:57.659 地图定位[1022:55837] 2015-11-29 05:03:57 +0000
+2015-11-29 13:03:57.659 地图定位[1022:55837] 您的当前位置:经度：-116.506400,纬度：39.285834,海拔：0.000000,航向：-1.000000,速度：-1.000000
+
+
+根据经纬度计算两地的距离
+ViewController.m
+
+#import "ViewController.h"
+#import <CoreLocation/CoreLocation.h>
+
+@interface ViewController ()
+@property (nonatomic,strong)CLLocationManager *locationManager;
+@end
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    //创建位置管理器
+    CLLocationManager *locationManager=[[CLLocationManager alloc]init];
+    self.locationManager=locationManager;
+    
+    //判断当前设备版本是否大于或等于8.0
+    if ([UIDevice currentDevice].systemVersion.floatValue >=8.0) {
+        //持续授权
+        //[locationManager requestAlwaysAuthorization];
+        //使用期间授权
+        [locationManager requestWhenInUseAuthorization];
+    }
+    //iOS 9.0以后苹果提供的新属性
+    if ([UIDevice currentDevice].systemVersion.floatValue >9.0) {
+        //是否允许后台定位
+        locationManager.allowsBackgroundLocationUpdates=YES;
+    }
+    
+    //开始定位
+    [locationManager startUpdatingLocation];
+    //比较两点距离
+    [self compareDistance];
+}
+
+//比较两地之间距离(直线距离)
+- (void)compareDistance{
+    //北京 (116.3,39.9)
+    CLLocation *location1=[[CLLocation alloc]initWithLatitude:39.9 longitude:116.3];
+    //郑州 (113.42,34.44)
+    CLLocation *location2=[[CLLocation alloc]initWithLatitude:34.44 longitude:113.42];
+    //比较北京距离郑州的距离
+    CLLocationDistance locationDistance=[location1 distanceFromLocation:location2];
+    //单位是m/s 所以这里需要除以1000
+    NSLog(@"北京距离郑州的距离为:%f",locationDistance/1000);
+
+}
+
+运行结果:
+2015-11-29 16:36:44.742 测量两点间距离[1500:125741] 北京距离郑州的距离为:657.622676
+
+地理编码与反地理编码
+地理编码:根据地址获得相应的经纬度以及详细信息
+反地理编码:根据经纬度获取详细的地址信息(比如:省市、街区、楼层、门牌等信息)
+地理编码与反地理编码用到得两个方法
+//地理编码
+- (void)geocodeAddressString:(NSString *)addressString completionHandler:(CLGeocodeCompletionHandler)completionHandler;
+
+//反地理编码
+ - (void)reverseGeocodeLocation:(CLLocation *)location completionHandler:(CLGeocodeCompletionHandler)completionHandler;
+地理编码的使用
+ViewController.m
+
+#import "ViewController.h"
+#import <CoreLocation/CoreLocation.h>
+
+@interface ViewController ()
+//地址
+@property (weak, nonatomic) IBOutlet UITextField *addressTextField;
+//经度
+@property (weak, nonatomic) IBOutlet UITextField *longitudeTextField;
+//纬度
+@property (weak, nonatomic) IBOutlet UITextField *latitudeTextField;
+//详细地址
+@property (weak, nonatomic) IBOutlet UITextView *textView;
+
+@end
+
+@implementation ViewController
+
+//地理编码
+- (IBAction)genocoder:(id)sender {
+    //创建编码对象
+    CLGeocoder *geocoder=[[CLGeocoder alloc]init];
+    //判断是否为空
+    if (self.addressTextField.text.length ==0) {
+        return;
+    }
+    [geocoder geocodeAddressString:self.addressTextField.text completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
+        if (error!=nil || placemarks.count==0) {
+            return ;
+        }
+        //创建placemark对象
+        CLPlacemark *placemark=[placemarks firstObject];
+        //赋值经度
+        self.longitudeTextField.text =[NSString stringWithFormat:@"%f",placemark.location.coordinate.longitude];
+        //赋值纬度
+        self.latitudeTextField.text=[NSString stringWithFormat:@"%f",placemark.location.coordinate.latitude];
+        //赋值详细地址
+        self.textView.text=placemark.name;
+    }];
+    
+}
+
+反地理编码的使用
+AntiEncoderController.m
+
+#import "AntiEncoderController.h"
+#import <CoreLocation/CoreLocation.h>
+
+@interface AntiEncoderController ()
+//经度
+@property (weak, nonatomic) IBOutlet UITextField *longitudeTextField;
+//纬度
+@property (weak, nonatomic) IBOutlet UITextField *latitudeTextField;
+//详细地址
+@property (weak, nonatomic) IBOutlet UITextView *textView;
+@end
+
+@implementation AntiEncoderController
+
+//反地理编码
+- (IBAction)AntiEncoder:(id)sender {
+    //创建地理编码对象
+    CLGeocoder *geocoder=[[CLGeocoder alloc]init];
+    //创建位置
+    CLLocation *location=[[CLLocation alloc]initWithLatitude:[self.latitudeTextField.text floatValue] longitude:[self.longitudeTextField.text floatValue]];
+    
+    //反地理编码
+    [geocoder reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
+        //判断是否有错误或者placemarks是否为空
+        if (error !=nil || placemarks.count==0) {
+            NSLog(@"%@",error);
+            return ;
+        }
+        for (CLPlacemark *placemark in placemarks) {
+            //赋值详细地址
+            self.textView.text=placemark.name;
+        }
+        
+    }];
+    
+}
+
+
+mapView的使用
+ViewController.m
+
+#import "ViewController.h"
+#import <MapKit/MapKit.h>
+
+@interface ViewController ()<MKMapViewDelegate>
+//mapView
+@property (weak, nonatomic) IBOutlet MKMapView *mapView;
+
+@property (nonatomic,strong)CLLocationManager *locationManager;
+@end
+
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    CLLocationManager *locationManager=[[CLLocationManager alloc]init];
+    self.locationManager=locationManager;
+    
+    //请求授权
+    [locationManager requestWhenInUseAuthorization];
+
+    /*
+     MKUserTrackingModeNone  不进行用户位置跟踪
+     MKUserTrackingModeFollow  跟踪用户的位置变化
+     MKUserTrackingModeFollowWithHeading  跟踪用户位置和方向变化
+     */
+    //设置用户的跟踪模式
+    self.mapView.userTrackingMode=MKUserTrackingModeFollow;
+    /*
+     MKMapTypeStandard  标准地图
+     MKMapTypeSatellite    卫星地图
+     MKMapTypeHybrid      鸟瞰地图
+     MKMapTypeSatelliteFlyover
+     MKMapTypeHybridFlyover
+     */
+    self.mapView.mapType=MKMapTypeStandard;
+    //实时显示交通路况
+    self.mapView.showsTraffic=YES;
+    //设置代理
+    self.mapView.delegate=self;
+    
+}
+
+//跟踪到用户位置时会调用该方法
+- (void)mapView:(MKMapView *)mapView didUpdateUserLocation:(MKUserLocation *)userLocation{
+    //创建编码对象
+    CLGeocoder *geocoder=[[CLGeocoder alloc]init];
+    //反地理编码
+    [geocoder reverseGeocodeLocation:userLocation.location completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
+        if (error!=nil || placemarks.count==0) {
+            return ;
+        }
+        //获取地标
+        CLPlacemark *placemark=[placemarks firstObject];
+        //设置标题
+        userLocation.title=placemark.locality;
+        //设置子标题
+        userLocation.subtitle=placemark.name;
+    }];
+    
+}
+
+//回到当前位置
+- (IBAction)backCurrentLocation:(id)sender {
+    
+    MKCoordinateSpan span=MKCoordinateSpanMake(0.021251, 0.016093);
+    
+    [self.mapView setRegion:MKCoordinateRegionMake(self.mapView.userLocation.coordinate, span) animated:YES];
+}
+
+//当区域改变时调用
+- (void)mapView:(MKMapView *)mapView regionDidChangeAnimated:(BOOL)animated
+{
+    //获取系统默认定位的经纬度跨度
+    NSLog(@"维度跨度:%f,经度跨度:%f",mapView.region.span.latitudeDelta,mapView.region.span.longitudeDelta);
+}
+
+//缩小地图
+- (IBAction)minMapView:(id)sender {
+   
+    //获取维度跨度并放大一倍
+    CGFloat latitudeDelta = self.mapView.region.span.latitudeDelta * 2;
+    //获取经度跨度并放大一倍
+    CGFloat longitudeDelta = self.mapView.region.span.longitudeDelta * 2;
+    //经纬度跨度
+    MKCoordinateSpan span = MKCoordinateSpanMake(latitudeDelta, longitudeDelta);
+    //设置当前区域
+    MKCoordinateRegion region = MKCoordinateRegionMake(self.mapView.centerCoordinate, span);
+    
+    [self.mapView setRegion:region animated:YES];
+}
+
+//放大地图
+- (IBAction)maxMapView:(id)sender {
+    
+    //获取维度跨度并缩小一倍
+    CGFloat latitudeDelta = self.mapView.region.span.latitudeDelta * 0.5;
+    //获取经度跨度并缩小一倍
+    CGFloat longitudeDelta = self.mapView.region.span.longitudeDelta * 0.5;
+    //经纬度跨度
+    MKCoordinateSpan span = MKCoordinateSpanMake(latitudeDelta, longitudeDelta);
+    //设置当前区域
+    MKCoordinateRegion region = MKCoordinateRegionMake(self.mapView.centerCoordinate, span);
+    
+    [self.mapView setRegion:region animated:YES];
+
+}
+
+向mapView上添加大头针
+只要我们的NSObject实现MKAnnotation协议,就可以作为一个大头针供我们使用,通常我们在我们的类中要重写协议中coordinate（标记位置）、title（标题）、subtitle（子标题）三个属性，然后在程序中创建大头针对象并调用addAnnotation:方法添加大头针即可
+ZKAnnotation.h
+
+#import <Foundation/Foundation.h>
+#import <MapKit/MapKit.h>
+//遵循协议
+@interface ZKAnnotation : NSObject<MKAnnotation>
+//经纬度
+@property (nonatomic)CLLocationCoordinate2D coordinate;
+//父标题
+@property (nonatomic,copy)NSString *title;
+//子标题
+@property (nonatomic,copy)NSString *subtitle;
+
+@end
+
+ViewController.h
+
+#import "ViewController.h"
+#import <MapKit/MapKit.h>
+#import "ZKAnnotation.h"
+
+@interface ViewController ()<MKMapViewDelegate>
+//mapView视图
+@property (weak, nonatomic) IBOutlet MKMapView *mapView;
+@end
+
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    ZKAnnotation *annotation=[[ZKAnnotation alloc]init];
+    annotation.coordinate=CLLocationCoordinate2DMake(39.9, 116);
+    annotation.title=@"我是父标题";
+    annotation.subtitle=@"我是子标题";
+    
+    self.mapView.delegate=self;
+    //添加大头针到北京
+    [self.mapView addAnnotation:annotation];
+}
+//当点击屏幕的时候调用
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+
+    //获取用户点击的位置
+    CGPoint point=[[touches anyObject]locationInView:self.mapView];
+    //将具体的位置转换为经纬度
+    CLLocationCoordinate2D coordinate=[self.mapView convertPoint:point toCoordinateFromView:self.mapView];
+
+    //添加大头针
+    ZKAnnotation *annotation=[[ZKAnnotation alloc]init];
+    annotation.coordinate=coordinate;
+    
+    //反地理编码
+    CLGeocoder *geocoder=[[CLGeocoder alloc]init];
+    CLLocation *location=[[CLLocation alloc]initWithLatitude:coordinate.latitude longitude:coordinate.longitude];
+    [geocoder reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
+        if (error==nil && placemarks.count==0) {
+            NSLog(@"错误信息:%@",error);
+            return ;
+        }
+        //获取地标信息
+        CLPlacemark *placemark=[placemarks firstObject];
+        //获取父标题名称
+        annotation.title=placemark.locality;
+        //获取子标题名称
+        annotation.subtitle=placemark.name;
+
+        //添加大头针到地图
+        [self.mapView addAnnotation:annotation];
+    }];
+    
+}
+
+
+效果如下
+mapView.gif
+动态添加大头针到地图
+ZKAnnotation.h
+
+#import <Foundation/Foundation.h>
+#import <MapKit/MapKit.h>
+
+@interface ZKAnnotation : NSObject<MKAnnotation>
+//经纬度
+@property (nonatomic) CLLocationCoordinate2D coordinate;
+//标题
+@property (nonatomic, copy) NSString *title;
+//子标题
+@property (nonatomic, copy) NSString *subtitle;
+@end
+
+ViewController.m
+
+#import "ViewController.h"
+#import <MapKit/MapKit.h>
+#import "ZKAnnotation.h"
+
+@interface ViewController ()<MKMapViewDelegate>
+//创建管理者
+@property (nonatomic,strong)CLLocationManager *locationManager;
+//mapView
+@property (weak, nonatomic) IBOutlet MKMapView *mapView;
+@end
+
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // 1.创建大头针模型
+    ZKAnnotation *annotation = [[ZKAnnotation alloc] init];
+    annotation.coordinate = CLLocationCoordinate2DMake(39.9, 116);
+    annotation.title = @"北京";
+    annotation.subtitle = @"默认显示的为首都北京";
+    
+    //添加第一个大头针模型
+    [self.mapView addAnnotation:annotation];
+    //设置代理
+    self.mapView.delegate = self;
+    
+    //请求授权
+    self.locationManager = [[CLLocationManager alloc] init];
+    [self.locationManager requestWhenInUseAuthorization];
+    
+    //设置用户跟踪模式
+    //self.mapView.userTrackingMode = MKUserTrackingModeFollow;
+}
+
+//点击屏幕的时候调用
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    //获取用户点击的位置
+    CGPoint point=[[touches anyObject]locationInView:self.mapView];
+    //将具体的位置转换为经纬度
+    CLLocationCoordinate2D coordinate=[self.mapView convertPoint:point toCoordinateFromView:self.mapView];
+    
+    //添加大头针
+    ZKAnnotation *annotation=[[ZKAnnotation alloc]init];
+    annotation.coordinate=coordinate;
+    
+    //反地理编码
+    CLGeocoder *geocoder=[[CLGeocoder alloc]init];
+    CLLocation *location=[[CLLocation alloc]initWithLatitude:coordinate.latitude longitude:coordinate.longitude];
+    [geocoder reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
+        if (error==nil && placemarks.count==0) {
+            NSLog(@"错误信息:%@",error);
+            return ;
+        }
+        //获取地标信息
+        CLPlacemark *placemark=[placemarks firstObject];
+        //获取父标题名称
+        annotation.title=placemark.locality;
+        //获取子标题名称
+        annotation.subtitle=placemark.name;
+        
+        //添加大头针到地图
+        [self.mapView addAnnotation:annotation];
+    }];
+
+}
+
+//创建大头针时调用
+- (MKAnnotationView *)mapView:(MKMapView *)mapView viewForAnnotation:(id<MKAnnotation>)annotation
+{
+    //如果返回空,代表大头针样式交由系统去管理
+    if ([annotation isKindOfClass:[MKUserLocation class]]) {
+        return nil;
+    }
+    static NSString *ID = @"annotation";
+    // MKAnnotationView 默认没有界面  可以显示图片
+    // MKPinAnnotationView有界面      默认不能显示图片
+    MKPinAnnotationView *annotationView = (MKPinAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:ID];
+    if (annotationView == nil) {
+        annotationView = [[MKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:ID];
+        //设置大头针颜色
+        annotationView.pinTintColor = [UIColor redColor];
+        //设置为动画掉落的效果
+        annotationView.animatesDrop = YES;
+        //显示详情
+        annotationView.canShowCallout = YES;
+    }
+    return annotationView;
+}
+@end
+
+效果如下
+动态添加大头针.gif
+导航
+除了可以使用MapKit框架进行地图开发，对地图有精确的控制和自定义之外，如果对于应用没有特殊要求的话选用苹果自带的地图应用也是一个不错的选择。想使用苹果自带的地图,我们需要用到MapKit中的MKMapItem类,这个类中有如下两个方法:
+openInMapsWithLaunchOptions:用于在地图上标注一个位置
+openMapsWithItems: launchOptions:除了可以标注多个位置外还可以进行多个位置之间的驾驶导航
+MKLaunchOptionsDirectionsModeKey :路线模式，常量
+MKLaunchOptionsDirectionsModeDriving 驾车模式
+MKLaunchOptionsDirectionsModeWalking 步行模式
+MKLaunchOptionsMapTypeKey:地图类型，枚举
+MKMapTypeStandard ：标准模式
+MKMapTypeSatellite ：卫星模式
+MKMapTypeHybrid ：混合模式
+MKLaunchOptionsMapCenterKey:中心点坐标，CLLocationCoordinate2D类型
+MKLaunchOptionsMapSpanKey:地图显示跨度，MKCoordinateSpan 类型
+MKLaunchOptionsShowsTrafficKey:是否 显示交通状况，布尔型
+MKLaunchOptionsCameraKey:3D地图效果，MKMapCamera类型
+注意：此属性从iOS7及以后可用，前面的属性从iOS6开始可用
+
+ViewController.m
+
+#import "ViewController.h"
+#import <MapKit/MapKit.h>
+
+@interface ViewController ()
+//地址
+@property (weak, nonatomic) IBOutlet UITextField *addressText;
+
+@end
+
+@implementation ViewController
+
+//开始导航
+- (IBAction)begin:(id)sender {
+    
+    //创建CLGeocoder对象
+    CLGeocoder *geocoder = [[CLGeocoder alloc] init];
+    [geocoder geocodeAddressString:self.addressText.text completionHandler:^(NSArray<CLPlacemark *> * _Nullable placemarks, NSError * _Nullable error) {
+        //获取目的地地理坐标
+        CLPlacemark *placemark = [placemarks lastObject];
+        //Mapkit框架下的地标
+        MKPlacemark *mkPlacemark = [[MKPlacemark alloc] initWithPlacemark:placemark];
+        //目的地的item
+        MKMapItem *mapItem = [[MKMapItem alloc] initWithPlacemark:mkPlacemark];
+        MKMapItem *currentmapItem = [MKMapItem mapItemForCurrentLocation];
+        NSMutableDictionary *options = [NSMutableDictionary dictionary];
+        //MKLaunchOptionsDirectionsModeDriving:导航类型设置为驾车模式
+        options[MKLaunchOptionsDirectionsModeKey] = MKLaunchOptionsDirectionsModeDriving;
+        //设置地图显示类型为卫星模式
+        options[MKLaunchOptionsMapTypeKey] = @(MKMapTypeHybrid);
+        options[MKLaunchOptionsShowsTrafficKey] =@(YES);
+        //打开苹果地图应用
+        [MKMapItem openMapsWithItems:@[currentmapItem,mapItem] launchOptions:options];
+    }];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view, typically from a nib.
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end
+
+作者：J_mailbox
+链接：https://www.jianshu.com/p/6fcb3cd01e3e
+來源：简书
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。

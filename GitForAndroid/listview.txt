@@ -1,0 +1,64 @@
+public class MainActivity extends Activity {
+
+    private SimpleAdapter sa;
+    private ListView lv;
+    private List<messages> messageList = new ArrayList<messages>();
+    private List<Map<String,Object> > messageList2 = new ArrayList<Map<String,Object> >();
+    private List<messages> messageList3;//用于ORMLite 的演示
+    
+    private DatabaseHelper db_helper;
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.weixin);
+
+            //模拟读取数据库或者互联网
+        
+            for (int i = 0; i < messageList3.size(); i++) {
+                    //定义一个界面与数据的混合体,一个item代表一行记录
+                    Map<String,Object> item  = new HashMap<String,Object>();
+                    //一行记录，包含多个控件
+                    item.put("tou", R.drawable.tou1);
+                    item.put("userName", messageList3.get(i).getUserName()+i);
+                    item.put("lastMessage", messageList3.get(i).getLastMessage());
+                    item.put("datetime",messageList3.get(i).getDatetime());
+                    messageList2.add(item);
+                }
+
+                  lv = (ListView)findViewById(R.id.listView1);
+                  sa = new SimpleAdapter(this,
+                  messageList2,//data 不仅仅是数据，而是一个与界面耦合的数据混合体
+                  R.layout.listview_item_layout,
+                  new String[] {"tou","userName","lastMessage","datetime"},//from 从来来
+                  new int[] {R.id.imageView1,R.id.tv_userName,R.id.tv_lastMessage,R.id.tv_datetime}//to 到那里去
+                  );
+         lv.setAdapter(sa);
+         lv.setOnItemClickListener(new OnItemClickListener() {
+
+      @Override
+    public void onItemClick(AdapterView<?> parent, View view,
+              int position, long id) {
+                      Map<String,Object> item = messageList2.get(position);
+                      item.put("userName", "赵本山"+position);
+                      sa.notifyDataSetChanged();
+          }
+      });
+  }
+            
+            @Override
+            public Object getItem(int position) {
+                // TODO Auto-generated method stub
+                return null;
+            }
+
+            @Override
+            public long getItemId(int position) {
+                // TODO Auto-generated method stub
+                return 0;
+            }
+
+        } );   
+    }
+    
+}

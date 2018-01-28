@@ -1,0 +1,202 @@
+tableView的使用(一)
+复制代码
+    //tableView的创建
+    //1.初始化 initWithFrame:style:(plian,gronp)
+    //2.设置属性(行高, 分割线, 表头, 表尾)
+    //3.添加到父视图
+    //4.释放
+    
+    //tableView显示数据
+    //1.设置dataSource
+    //2.遵循协议<UITableViewDateSource>
+    //3.实现两个必须要实现的方法(a. 返回某个分区行数, b.返回cell)
+    
+    //tableViewCell 创建
+    //1.重用标识符(static初始化一次,节约内存)
+    //2.通过标识符去复用池找cell
+    //3.判断cell是否找到, 如果没有找到, 创建cell(initWithStyle:reuseIdentifier)要释放autorelease
+    //4.判断括号外,对cell进行复制
+    //5.return cell
+//
+  UITableViewDelegate, UITableViewDataSource一部分代理方法的使用
+
+#import "TableViewController.h"
+
+@interface TableViewController ()<UITableViewDelegate, UITableViewDataSource>//tableView想要实现显示内容必须遵守的协议
+
+@end
+
+@implementation TableViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.navigationItem.title = @"Cell";
+    self.view.backgroundColor = [UIColor yellowColor];
+    
+    //tableView的创建
+    //1.初始化
+    UITableView *tableView = [[UITableView alloc] initWithFrame:self.view.frame style:UITableViewStylePlain];
+    //2.设置属性(行高, 分割线, 表头, 表尾)
+    tableView.rowHeight = 60;
+    //UITableViewCellSeparatorStyleSingleLine(默认)
+    tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
+    tableView.separatorColor = [UIColor redColor];
+    tableView.separatorInset = UIEdgeInsetsMake(0, 0, 0, 0);
+    tableView.backgroundColor = [UIColor grayColor];
+    UILabel *headerLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 375, 30)];
+    headerLabel.text = @"IOS应用排行榜";
+    headerLabel.textAlignment = NSTextAlignmentCenter;
+    tableView.tableHeaderView = headerLabel;//表头,需要先创建一个Label,然后把创建好的Label赋给表头表尾
+    [headerLabel release];
+    
+    //通过表尾可以清除多余分割线
+    //tableView.tableFooterView = [[[UIView alloc] init] autorelease];
+    //设置是否允许多选
+    tableView.allowsMultipleSelection = YES;
+    
+    
+    //tableView,想要显示数据,使用dataSource模式, dataSource实质还是代理模式
+    //步骤a.设置dataSource
+    //    b.遵循协议<UITableViewDateSource>
+    //    c.实现两个必须要实现的方法(a.返回某个分区行数, b.返回cell)
+    
+    tableView.dataSource = self;
+    tableView.delegate = self;
+    //3. 添加父视图
+    [self.view addSubview:tableView];
+    //4. 释放
+    [tableView release];
+    
+    // Do any additional setup after loading the view.
+}
+
+
+#pragma mark -- UITableViewDataSource
+//UITableViewDataSource中方法
+//@required 必须要实现的两个方法1.和 2.
+
+//1.设置行数(如果有分区的话,可以通过if判断每个分区,然后给每个分区赋不同的行数)
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return 10;//此处返回设置10行,返回10;
+}
+//2.UITableViewCell, 单元格类, 继承于UIView, 用于在UITableView上显示内容
+//注:会执行多次, 每走一次, 创建一个cell; 第一次只创建出一个屏幕能够显示的cell,如果滚动tableView, 会再走这个方法,再次创建cell
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    //cell重用机制(复用机制),用于降低内存消耗
+    //方法内部的实现
+    //a.定义重用标示,static 静态变量,初始化一次, 降低内存的消耗
+    static NSString *identifier = @"CELL";
+    //b.去重用队列中根据标识符取可重用的 cell
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    //c. 判断是否获取到可重用的 cell( 最后要空间释放 )
+    if (!cell) {//!cell 相当于 cell == nil
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:identifier];
+        cell.accessoryType = UITableViewCellAccessoryDetailDisclosureButton;//辅助标示类型
+        
+    }
+    //显示内容
+    
+    cell.imageView.image = [UIImage imageNamed:@"李四"];
+    cell.textLabel.text = @"李四";
+    cell.detailTextLabel.text = @"我是李四";
+    return cell;
+
+}
+/*
+//辅助表示类型 用accessoryType 赋值
+
+        UITableViewCellAccessoryNone,                   // don't show any accessory view
+        UITableViewCellAccessoryDisclosureIndicator,    // regular chevron. doesn't track
+        UITableViewCellAccessoryDetailDisclosureButton, // info button w/ chevron. tracks
+        UITableViewCellAccessoryCheckmark,              // checkmark. doesn't track
+        UITableViewCellAccessoryDetailButton NS_ENUM_AVAILABLE_IOS(7_0) // info button. tracks
+ 
+*/
+
+
+
+
+//@optional  UITableViewDataSource 中不必实现但是经常用到的方法
+//1.设置分组个数section
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 3;//返回多少就是多少个分区
+}
+//2.设置区头(section)
+-(NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
+{
+    NSArray *array = @[@"A", @"B", @"C"];
+    return array[section];
+}
+//3.设置区尾
+-(NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
+{
+    NSArray *array = @[@"AAA", @"BBB", @"CCC"];
+    return array[section];
+}
+//4.右侧添加一个索引表
+
+-(NSArray *)sectionIndexTitlesForTableView:(UITableView *)tableView
+{
+    NSArray *aa = @[@"A", @"B", @"C"];
+    return aa;
+}
+#pragma mark - UITableViewDelegate
+
+//UITableViewDelegate中得一些常用方法
+//1.将显示单元格
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSLog(@"%s", __FUNCTION__);
+
+}
+//2.自定义区头视图
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    UIView *hearderView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 375, 44)];
+    hearderView.backgroundColor = [UIColor yellowColor];
+//    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 40, 40)];
+//    label.text = @"zhao";
+//    [hearderView addSubview:label];
+//    [label release];
+    return [hearderView autorelease];
+}
+
+//3.自定义区尾视图
+//- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section
+//{
+//
+//}
+
+//4.设置每行间隔的高度
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+
+    return 80;
+}
+//5.选择哪一section的哪一行
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSLog(@"section: %ld, row: %ld", indexPath.section, indexPath.row);
+}
+
+//6.设置选中的行所执行的动作
+-(NSIndexPath *)tableView:(UITableView *)tableView willSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    //NSLog(@"%s",__FUNCTION__);
+    //NSUInteger row = [indexPath row];
+    return indexPath;
+
+}
+
+//设置让UITableView行缩进
+-(NSInteger)tableView:(UITableView *)tableView indentationLevelForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSLog(@"%s",__FUNCTION__);
+    NSUInteger row = [indexPath row];
+    return row;
+}
+
+@end

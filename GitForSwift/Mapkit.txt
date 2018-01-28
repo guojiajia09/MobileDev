@@ -1,0 +1,427 @@
+Swift - 使用MapKit显示地图，并在地图上做标记
+2015-07-10发布：hangge阅读：8389
+（本文代码已升级至Swift3）
+
+通过使用 MapKit 可以将地图嵌入到视图中，MapKit 框架除了可以显示地图，还支持在地图上做标记。
+
+1，通过mapType属性，可以设置地图的显示类型
+MKMapType.standard ：标准地图
+MKMapType.satellite ：卫星地图
+MKMapType.hybrid ：混合地图
+
+2，地图显示范围的设置
+MKCoordinateSpan 对象设置地图范围，其中包含两个成员 latitudeDelta 和 longtitudeDelta，这两个类型为 CLLocationDegrees（实际就是 double 类型）。
+一般设置为多少纬度，1纬度约等于111千米（69英里）
+
+3，添加标记
+使用 MKPointAnnotation 对象可以在地图上任意位置添加大头针，同时还可以给这个标记添加标题和描述。
+
+4，下面通过样例来演示
+原文:Swift - 使用MapKit显示地图，并在地图上做标记
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+import UIKit
+import MapKit
+import CoreLocation
+ 
+class ViewController: UIViewController {
+     
+    var mainMapView: MKMapView!
+     
+    //定位管理器
+    let locationManager:CLLocationManager = CLLocationManager()
+     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+         
+        //使用代码创建
+        self.mainMapView = MKMapView(frame:self.view.frame)
+        self.view.addSubview(self.mainMapView)
+         
+        //地图类型设置 - 标准地图
+        self.mainMapView.mapType = MKMapType.standard
+         
+        //创建一个MKCoordinateSpan对象，设置地图的范围（越小越精确）
+        let latDelta = 0.05
+        let longDelta = 0.05
+        let currentLocationSpan:MKCoordinateSpan = MKCoordinateSpanMake(latDelta, longDelta)
+         
+        //定义地图区域和中心坐标（
+        //使用当前位置
+        //var center:CLLocation = locationManager.location.coordinate
+        //使用自定义位置
+        let center:CLLocation = CLLocation(latitude: 32.029171, longitude: 118.788231)
+        let currentRegion:MKCoordinateRegion = MKCoordinateRegion(center: center.coordinate,
+            span: currentLocationSpan)
+         
+        //设置显示区域
+        self.mainMapView.setRegion(currentRegion, animated: true)
+         
+        //创建一个大头针对象
+        let objectAnnotation = MKPointAnnotation()
+        //设置大头针的显示位置
+        objectAnnotation.coordinate = CLLocation(latitude: 32.029171,
+            longitude: 118.788231).coordinate
+        //设置点击大头针之后显示的标题
+        objectAnnotation.title = "南京夫子庙"
+        //设置点击大头针之后显示的描述
+        objectAnnotation.subtitle = "南京市秦淮区秦淮河北岸中华路"
+        //添加大头针
+        self.mainMapView.addAnnotation(objectAnnotation)
+    }
+}
+
+5，标记样式的修改
+默认标记是一个红色的大头针。通过MKMapViewDelegate代理，我们可以自定义大头针的样式，以及点击注释视图右侧按钮样式等。
+原文:Swift - 使用MapKit显示地图，并在地图上做标记
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+import UIKit
+import MapKit
+import CoreLocation
+ 
+class ViewController: UIViewController, MKMapViewDelegate {
+     
+    var mainMapView: MKMapView!
+     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+         
+        //使用代码创建
+        self.mainMapView = MKMapView(frame:self.view.frame)
+        self.view.addSubview(self.mainMapView)
+         
+        self.mainMapView.delegate = self
+         
+        //添加大头针等相关代码（这个同前面一样，就不再写了）
+        //.......
+    }
+     
+    //自定义大头针样式
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation)
+        -> MKAnnotationView? {
+        if annotation is MKUserLocation {
+            return nil
+        }
+         
+        let reuserId = "pin"
+        var pinView = mapView.dequeueReusableAnnotationView(withIdentifier: reuserId)
+            as? MKPinAnnotationView
+        if pinView == nil {
+            //创建一个大头针视图
+            pinView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuserId)
+            pinView?.canShowCallout = true
+            pinView?.animatesDrop = true
+            //设置大头针颜色
+            pinView?.pinTintColor = UIColor.green
+            //设置大头针点击注释视图的右侧按钮样式
+            pinView?.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
+        }else{
+            pinView?.annotation = annotation
+        }
+         
+        return pinView
+    }
+}
+
+6，地图代理 - MKMapViewDelegate中所有代理方法
+MKMapViewDelegate除了可以设置大头针样式，注释视图点击响应等。还可以在地图相关事件发生时（比如缩放，地图加载，位置跟踪等），触发相应的方法。
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+import UIKit
+import MapKit
+import CoreLocation
+ 
+class ViewController: UIViewController, MKMapViewDelegate {
+     
+    var mainMapView: MKMapView!
+     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+         
+        //使用代码创建
+        self.mainMapView = MKMapView(frame:self.view.frame)
+        self.view.addSubview(self.mainMapView)
+         
+        self.mainMapView.delegate = self
+    }
+     
+    func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+        print("地图缩放级别发送改变时")
+    }
+     
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        print("地图缩放完毕触法")
+    }
+     
+    func mapViewWillStartLoadingMap(_ mapView: MKMapView) {
+        print("开始加载地图")
+    }
+     
+    func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
+        print("地图加载结束")
+    }
+     
+    func mapViewDidFailLoadingMap(_ mapView: MKMapView, withError error: Error) {
+        print("地图加载失败")
+    }
+     
+    func mapViewWillStartRenderingMap(_ mapView: MKMapView) {
+        print("开始渲染下载的地图块")
+    }
+     
+    func mapViewDidFinishRenderingMap(_ mapView: MKMapView, fullyRendered: Bool) {
+        print("渲染下载的地图结束时调用")
+    }
+     
+    func mapViewWillStartLocatingUser(_ mapView: MKMapView) {
+        print("正在跟踪用户的位置")
+    }
+     
+    func mapViewDidStopLocatingUser(_ mapView: MKMapView) {
+        print("停止跟踪用户的位置")
+    }
+     
+    func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
+        print("更新用户的位置")
+    }
+     
+    func mapView(_ mapView: MKMapView, didFailToLocateUserWithError error: Error) {
+        print("跟踪用户的位置失败")
+    }
+     
+    func mapView(_ mapView: MKMapView, didChange mode: MKUserTrackingMode,
+                 animated: Bool) {
+        print("改变UserTrackingMode")
+    }
+     
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay)
+        -> MKOverlayRenderer {
+        print("设置overlay的渲染")
+        return MKPolylineRenderer()
+    }
+     
+    private func mapView(mapView: MKMapView,
+                         didAddOverlayRenderers renderers: [MKOverlayRenderer]) {
+        print("地图上加了overlayRenderers后调用")
+    }
+     
+    /*** 下面是大头针标注相关 *****/
+    func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+        print("添加注释视图")
+    }
+     
+    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView,
+                 calloutAccessoryControlTapped control: UIControl) {
+        print("点击注释视图按钮")
+    }
+     
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        print("点击大头针注释视图")
+    }
+     
+    func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+        print("取消点击大头针注释视图")
+    }
+     
+    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView,
+                 didChange newState: MKAnnotationViewDragState,
+                 fromOldState oldState: MKAnnotationViewDragState) {
+        print("移动annotation位置时调用")
+    }
+}
+
+原文出自：www.hangge.com  转载请保留原文链接：http://www.hangge.com/blog/cache/detail_787.html

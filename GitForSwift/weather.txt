@@ -1,0 +1,405 @@
+Swift作为现在苹果极力推广的语言，发展的非常快。这个语言就和她的名字一样，比OC减少了很多的文件和代码量。头文件，bye bye啦，再不用查个代码上下的头文件源文件切换了。而且语言本身也增加了很多的安全性的考虑，比如类的初始化个阶段的检查等。不按照规定的写就不能编译通过！本文假定你有一定的编程基础，和一定的Swift基础。如果木有的话，请看这里迅速补起。
+
+本文就用Swif写一个APP，让各位一起来体会一下Swift到底是好在了哪里。为了简单，教程会使用Storyboard，而不是手动的添加Controller以及Controller的View的各种视图。使用Storyboard可以减少很多的代码量。这个会在之后的教程中体现出来。任何的视图跳转都是按下Ctrl之后的连线，都是Segue。这些标准的跳转都不用写一行代码。
+
+现在的APP，没有哪个是孤立的存在在用户的手机里的。除了，额，类似于2048这样的APP没有明显的连接后台的服务器，但是，你的位置等信息都传到了后台的服务器。所以，我们的教程还要涉及到网络连接。先用SDK内置的，然后再讲解现在十分流行的AFNetworking。
+
+这个天气预报的APP看起来会是这样的：
+
+
+
+现在进入正题，创建我们的项目：
+
+
+
+选择一个Single View的模版。然后：
+
+
+
+之后填写项目名称，Swift Weather以及其他的如，组织名称等。之后一直下一步，确定就创建了项目。
+
+这个时候你会看到除了Storyboard居然会有一个xib文件。这个xib文件不是用来在APP中结合使用ViewController的。而是专门用来适配不同个屏幕分辨率的。也就是有了这个叫做LaunchScreen.xib的文件，就不用在每一个分辨率下都做一张LaunchImage的图片了。
+
+这里有一点需要注意。这个LaunchScreen的nib文件是不能像之前我们常用到的xib文件一样设置File Owner之后绑定IBOutlet和IBAction的。因为这个nib文件在加载的时候APP还没有加载完成，所以即使绑定了File Owner的ViewControler也是用不了的。
+
+下面我们开始在Storyboard中穿件不同的Scene（对应到一个UIViewController）并把他们连接起来。在这之前需要明白我们的这个APP会如何工作呢？这里，我们的比较简单，不要想成新浪天气、墨迹天气。因为，这个是课后作业。看完教程以后由你自己去实现一个类似的活着更好的天气预报的客户端。我们的Demo天气预报APP相对简单。用户打开APP后直接进入APP天气的主界面查看天气。之后用户可以点击导航栏左侧的“City”按钮更换城市活着点击右侧的“Refresh”按钮来实时的刷新天气数据。
+
+主界面的头看起来会是这个样子的：
+
+
+
+好的，回到Storyboard上来。首先从右侧动Utilities边栏中拖动一个UINavigationController：
+
+
+
+到Storyboard上来，并设定位Initial Controller, 如图：
+
+
+
+ 拖动一个UINavigationController会自带一个RootViewController上来。选中这个Controller删了。我们要用自己的Controller作为RootViewController。删了之后从右侧到菜单中选择一个ViewController，并把鼠标放到UINavigationController上，然后按下Ctrol键，用鼠标缓缓的拖一条蓝蓝的细线到你新家上来的ViewController上。放开Ctrl。在弹出的菜单里选择最下面的relationship－>rootViewController。连接完成之后就会产生一个segue。
+
+
+
+这个APP已经可以运行起来了，按下Command＋R，模拟器中就会出现这个APP。虽然现在的界面还是很简单的。
+
+基本的结构已经有了，下面添加主界面元素。仔细观察界面，可以发现一个规律：
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+大体的结构是在最上面显示地点，下面的大太阳是当前的天气状况，再下面是当前的温度。在主界面下面的一排小图是分时段的天气和温度。显示的顺序都是时间，当时天气的图片和当时的温度。小的结构都是上面文字，中间图片，下面又是文字。最大的不同在于主界面的大图部分上面显示的是地名，而下面分时间显示天气部分，显示的是时间。所以，正题的结构都差不过，从上到下的顺序显示了文字图片然后文字。先记住这个，在后面会用到这个规律。现在先按照这样的规律把界面上需要的元素拖动到ViewController的View上。使用快捷键Option＋Command＋L，之后输入label。你会在右侧的边栏里出现UILabel这个控件，拖动到View上。其他的依次都拖动到主界面上。然后在Storyboard中绑定Controller文件。主界面对应的代码文件是MainViewController，并在代码中加入各个控件对应的IBOutlet。就像这样：
+
+复制代码
+    @IBOutlet weak var icon : UIImageView!
+    @IBOutlet weak var temperature : UILabel!
+    @IBOutlet weak var loading : UILabel!
+    @IBOutlet weak var location : UILabel!
+    @IBOutlet weak var time1: UILabel!
+    @IBOutlet weak var time2: UILabel!
+    @IBOutlet weak var time3: UILabel!
+    @IBOutlet weak var time4: UILabel!
+    @IBOutlet weak var image1: UIImageView!
+    @IBOutlet weak var image2: UIImageView!
+    @IBOutlet weak var image3: UIImageView!
+    @IBOutlet weak var image4: UIImageView!
+    @IBOutlet weak var temp1: UILabel!
+    @IBOutlet weak var temp2: UILabel!
+    @IBOutlet weak var temp3: UILabel!
+    @IBOutlet weak var temp4: UILabel!
+复制代码
+现在就可以绑定Storyboard的控件和MainViewController中的IBoutlet了。绑定的顺序：先、在Storyboard中选中主界面的Scene，二、点一下圈住的地方，这个时候在有边栏里就会发现有IBOutlet的一个section里面就都是我们刚刚在代码中定义的属性。如左图，有icon这个属性就是在上面的代码中有提到的定义的属性。
+
+绑定的时候把鼠标放到比如icon的后面的小圈圈上面，然后按住Ctrl键，拖动鼠标到你要绑定的控件上，放开Ctrl键绑定就完成了。就像左图中的textLabel一样的效果。点那个小叉叉就可以断开控件和代码中的对应属性的绑定。
+
+ 
+
+ 
+
+绑定好之后就可以在代码中修改这些控件的值等属性了。绑定好的：
+
+
+
+ 这里假定你已经把界面的元素都按照主界面样子摆好了，设定好，并且已经绑定。如果有任何问题，请参考源代码。
+
+这里必须提一件事。之所以很多公司的开发都不使用nib文件和现在的storyboard。就是因为，大家也看到了，使用nib或者storyboard文件会有很多的名称，稍微的修改就可能忘记了什么地方没有重新绑定。没有绑定控件的，运行起来的时候可能就会出现崩溃的情况。因为，根据key-value的方式存取控件的时候，没有绑定的找不到。其他还有很多需要设定名称的地方还包括IBAction还有Segue等。虽然，Storyboard有这个不好的地方。不过对于个人开发者是切实的减少了代码量。也大大的提高了开发速度！所以Storyboard的优点还是很明显的。
+
+当全部的控件都摆好之后看起来就是这个样子的了。
+
+
+
+ 
+
+以上的内动几乎都在说界面的事情了。你会看到还有两个地方没有提到。一个是City，一个是Refresh。这两个按钮式用来更换城市和刷新数据的。点了City之后弹出界面，用户可以选择一个另外的城市，查看该地的天气信息。点击Refresh之后可以重新获取当地的天气数据，并刷新主界面的数据。在City按钮的界面元素中会涉及到一个“unwind segue”的知识点。比较简单。放在下面的教程中继续讲解。
+
+咱们的天气都是根据用户所在的位置来获取和显示的。至少在用户第一次进入APP的时候，APP自动获取用户的地理位置信息，并根据这个位置信息访问服务器信息获取天气数据。所以，首要的问题就是后去用户的地理位置，也就是经纬度。
+
+详细的关于在iOS8下获取地理位置的方法可以看这篇。这里简单的说一下。获取位置信息都是用到CoreLocation框架。在Xcode6中无需再专门的做引入框架的操作。只要在代码中用import 看框架名称就可以。
+
+import UIKit
+import CoreLocation //获取地理位置
+要获取用户的地理位置是需要用户的同意的，所以首先需要在代码中请求用户的同意（在iOS8中）。请求用户的同意时的文字则一定要在项目的plist文件中配置。这个plist中的配置是必须的！否则，APP运行起来也获取不了用户的地理位置。
+
+获取地理位置的方法和iOS的其他版本都是一样的，设定代理，在代理中获取地理位置，或者处理获取信息中产生的错误。
+
+class ViewController: UIViewController, CLLocationManagerDelegate
+上面是实现LocationManagerDelegate，下面是指定代理，设置精度和请求用户同意等。
+
+复制代码
+        self.locationManager.delegate = self;
+        self.locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        self.locationManager.distanceFilter = kCLLocationAccuracyKilometer
+        if self.locationManager.respondsToSelector("requestAlwaysAuthorization") {
+            println("requestAlwaysAuthorization")
+            self.locationManager.requestAlwaysAuthorization()
+        }
+复制代码
+这一句if self.locationManager.respondsToSelector("requestAlwaysAuthorization")是为了和iOS8之前的系统兼容。
+
+最后看看LocationManager的代理如何获取地理位置和如何处理错误。
+
+复制代码
+//MARK: CoreLocationManagerDelegate
+    func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!){
+        println("get location")
+        var location:CLLocation = locations[locations.count-1] as CLLocation
+        
+        if (location.horizontalAccuracy > 0) {
+            self.locationManager.stopUpdatingLocation()
+            println(location.coordinate)
+
+            self.textLabel.text = "latitude \(location.coordinate.latitude) longitude \(location.coordinate.longitude)"
+        }
+    }
+    
+    func locationManager(manager: CLLocationManager!, didFailWithError error: NSError!) {
+        println(error)
+        self.textLabel.text = "get location error"
+    }
+复制代码
+这里的错误处理，只是在显示具体的经纬度的Label中显示了出错的文字。为了更好的用户体验，错误的提示可以采用更友好的方法。这里只简单说到这里。
+
+这个APP的第一部分就先介绍到这里。更多内容会在后面的教程中继续解说。
+
+ 上篇中主要讲了界面的一些内容，这篇主要讨论网络请求，获得天气的数据。具体的说是HTTP请求天气站点的API，得到返回的JSON数据。解析这些数据，并更新到界面内容中。 让用户知道当前的和之后几个小时的天气状况。
+
+发起HTTP请求主要用到的是SDK的NSURLSession这个类，使用这个类对象可以创建请求任务并在这个任务中处理请求之后由服务器返回的JSON数据。在NSURLSession之前主要用到的是NSURLConnection。这两个类比较类似。只是在NSURLSession中增加了后台执行的请求。发起网络请求的时候，使用NSURLSession创建对应的NSURLSessionTask，并由这个Task请求服务器和处理返回的数据。
+
+下面大体的看看我们怎么做HTTP请求的。本文将主要叙述如何发起HTTP请求。先讲讲使用最基本的iOS的SDK发请求，然后叙述如何用现在比较流向的AFNetworking框架请求。或许你也听说过一个叫做ASIHttpRequest的框架，但是这个已经很久没有人维护了。所以，这里就不再提及。
+
+使用iOS SDK发起HTTP网络请求：
+
+1. 准备访问服务器的NSURL对象。这个对象需要一个url字符串，比如百度的地址字符串就是“http://www.baidu.com”，我们这里需要一个指向天气服务器的字符串。
+
+var weatherUrl = "http://api.openweathermap.org/data/2.5/forecast?lat=\(latitude)&lon=\(longitude)"
+var url = NSURL(string: weatherUrl)
+第一句的问好后面的部分?lat=\(latitude)&lon=\(longitude)是为url指定用户当前的经纬度。之后根据这个url字符串生成NSURL对象。
+
+2. 创建NSURLSession对象。NSURLSession有一个类方法创建实例。
+
+self.urlSession = NSURLSession.sharedSession()
+一般用到shareXXX的方式命名的方法是一个单例方法。也就是这个方法在被调用的时候会判断需要的实例是否已经创建，如果是的话返回创建好的实例，如果没有创建则初始化一个并保存起来以备下次使用。关于使用Swift实现单例模式，请参考这里。
+
+3. 创建NSURLSessionDataTask，并设置好如何处理请求返回的数据。然后开始HTTP请求。
+
+复制代码
+var task = self.urlSession.dataTaskWithURL(url!, completionHandler: {(data:NSData!, response: NSURLResponse!, error: NSError!) in
+        if error != nil {
+            println("http request error \(error)")
+            return
+        }
+        println("\(response)")
+        var httpResponse = response as NSHTTPURLResponse
+        var statusCode: NSInteger = httpResponse.statusCode
+        println("status code: \(statusCode)")
+            
+        var error: NSError?
+        var jsonDictionary = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: &error) as NSDictionary
+        if error != nil {
+            println("json error")
+            return
+        }
+            
+        println("json \(jsonDictionary)")
+        self.jsonLabel.text = jsonDictionary.description
+    })
+    task.resume()
+复制代码
+self.urlSession.dataTaskWithURL这个方法创建了一个DataTask。completionHandler后面的就是指定的处理返回数据的方法。这里使用了Swit的闭包。闭包的语法可以简单的概括为{(参数列表。。。)->闭包的返回类型 in 功能代码在这里}具体的参考上面的代码示例。那么具体的，我们应该如何处理返回的数据呢。第一步，先查看返回的错误error是否为空。如果为空就是没有错，否则，就是有错了。这个时候就可以提示用户后直接return，不再处理后面的代码了。
+
+下面就是检查response的statusCode。状态码最直观的就是大家都见过的404，虾米都木有找到的时候的提示。如果是200，那么就是请求服务器成功。否则，也可以提示用户后返回了。
+
+最后就是解析用户数据了。首先需要把服务器返回的JSON格式的数据转换为Swift可以直接访问的NSDictionary。记住，这里是NSDictionary不是Swift基础数据类型中的泛型Dictionary<KeyType, ValueType>。服务器的JSON数据转换成NSDictionary后就可以取出需要的数据并更新到主界面上了。
+
+这里你会发现很多的代码调用都是通过NSError的实例是否为空判断某函数的执行是否有错误发生的。Swift没有try-catch的异常处理模式。只有这样的error的方式。这个大家需要习惯。用这种方式处理错误是为了去掉代码的二意性。有其他语言编程经理的都知道，有时候就用try-catch来做代码的某些判断了。这是不对的。
+
+ 最后调用task的resume方法开始HTTP请求。
+
+ 前文已经简单的提到过定位的功能。本文在这里之前都在讨论HTTP请求的功能。如前面提到的，请求天气数据到时候需要用到经纬度的数据作为url参数。所以HTTP请求只能在定位成功获取到用户当前的经纬度之后进行。所以，在代码实现的时候，网络请求在Location Manager的定位成功的代理方法中发起。
+
+复制代码
+func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!){
+        println("get location")
+        var location:CLLocation = locations[locations.count-1] as CLLocation
+        
+        if (location.horizontalAccuracy > 0) {
+            self.locationManager.stopUpdatingLocation()
+            println(location.coordinate)
+
+            self.textLabel.text = "latitude \(location.coordinate.latitude) longitude \(location.coordinate.longitude)"
+            
+            // 在这里发起HTTP请求
+            self.updateWeatherWith(location.coordinate.latitude, longitude: location.coordinate.longitude)
+        }
+    }
+复制代码
+ 
+
+到此为止，从获取用户位置到使用用户的经纬度数据请求天气服务器获取天气的JSON数据的功能都已经衔接在一起了。
+
+那么，我们来讨论一下如何使用AFNetworking这个框架（framework）。在这之前，用户需要配置cocoaPods。具体的步骤可以参考这里。这里必须吐槽一下，Ruby什么的编程之类的网站多要墙真是不可理喻啊。配置好之后，亲，你一定要点击的时候workspace那个后缀的文件，不是项目文件了。否则会出错。
+
+要使用AFNetworking框架就涉及到一个Objective-C和Swift交互的问题了。
+
+let manager = AFHTTPRequestOperationManager()
+这行代码直接编译不通过。。。稍微深究机会发现，在Swift中没有办法直接使用OC（Objective-C）的代码。翻翻项目，找到SwiftWeather-Bridging-Header.h头文件，然后在里面添加对于AFNetworking框架的引用。
+
+#import <AFNetworking/AFNetworking.h>
+添加后，编译你的项目。上面那行出错的代码就可以用了。
+
+使用AFNetworking框架确实会很方便。不用像使用NSURLSession里那样写那么多的代码。这个通过一个简单的感官比较就会得出结论。先在上AFNetworking的HTTP请求代码。
+
+复制代码
+let manager = AFHTTPRequestOperationManager()
+        
+    let url = "http://api.openweathermap.org/data/2.5/forecast"
+    println(url)
+        
+    let params = ["lat":latitude, "lon":longitude, "cnt":0]
+    println(params)
+        
+    manager.GET(url,
+        parameters: params,
+        success: { (operation: AFHTTPRequestOperation!,
+            responseObject: AnyObject!) in
+            //println("JSON: " + responseObject.description!)
+                
+            self.updateUISuccess(responseObject as NSDictionary!)
+        },
+        failure: { (operation: AFHTTPRequestOperation!,
+            error: NSError!) in
+            println("Error: " + error.localizedDescription)
+                
+            self.loading.text = "Internet appears down!"
+        })
+复制代码
+初始化一个AFHTTPRequestOperationManager来处理请求和数据返回等的处理，一个类就够了。不用task什么的了。指定要访问的url字符串，这里是字符串也不需要NSURL的实例了。然后把需要给url字符串添加的参数放在一个Dictionary<String, String>泛型字典中。然后用manager发出HTTP请求，并指定了请求的方式为GET，函数的名字就是HTTP请求的方式。HTTP请求还有除GET之外的很多中，其中最常用的是POST。然后可以看到GET方法中的sucess和failure，都分别是在指定请求成功的处理代码和失败的处理代码。
+
+请求数据不是总能成功。这在代码中也有体现。但是不成功的数据请求并不只是请求不到数据，比如在网络不通的时候。还包括请求到了数据，但是数据表明这个请求是错误的。所以，在网络连接失败而造成的网络请求失败时提醒用户“Internet apears down”。在数据解析后发现服务器返回数据提示说数据错误，这个时候也要提醒用户错误。这里只是点到，不做其他处理。读者在实际的开发中需要注意这一点。 
+
+数据请求完成后，调用方法updateUISuccess把数据显示在界面元素中。从上到下，依次是用户所在地（文字），天气（图片），温度（文字）。然后在下面，从左到右，依次显示这一天中其他几个小时 的天气预报。
+
+复制代码
+    func updateUISuccess(jsonResult: NSDictionary) {
+        self.loading.text = nil
+        self.loadingIndicator.hidden = true
+        self.loadingIndicator.stopAnimating()
+        
+        if let tempResult = ((jsonResult["list"]? as NSArray)[0]["main"] as NSDictionary)["temp"] as? Double {
+            
+            // If we can get the temperature from JSON correctly, we assume the rest of JSON is correct.
+            var temperature: Double
+            var cntry: String
+            cntry = ""
+            if let city = (jsonResult["city"]? as? NSDictionary) {
+                if let country = (city["country"] as? String) {
+                    cntry = country
+                    if (country == "US") {
+                        // Convert temperature to Fahrenheit if user is within the US
+                        temperature = round(((tempResult - 273.15) * 1.8) + 32)
+                    }
+                    else {
+                        // Otherwise, convert temperature to Celsius
+                        temperature = round(tempResult - 273.15)
+                    }
+                    
+                    // FIXED: Is it a bug of Xcode 6? can not set the font size in IB.
+                    //self.temperature.font = UIFont.boldSystemFontOfSize(60)
+                    self.temperature.text = "\(temperature)°"
+                }
+                
+                if let name = (city["name"] as? String) {
+                    self.location.font = UIFont.boldSystemFontOfSize(25)
+                    self.location.text = name
+                }
+            }
+            
+            if let weatherArray = (jsonResult["list"]? as? NSArray) {
+                for index in 0...4 {
+                    if let perTime = (weatherArray[index] as? NSDictionary) {
+                        if let main = (perTime["main"]? as? NSDictionary) {
+                            var temp = (main["temp"] as Double)
+                            if (cntry == "US") {
+                                // Convert temperature to Fahrenheit if user is within the US
+                                temperature = round(((temp - 273.15) * 1.8) + 32)
+                            }
+                            else {
+                                // Otherwise, convert temperature to Celsius
+                                temperature = round(temp - 273.15)
+                            }
+                            
+                            //FIXED: Is it a bug of Xcode 6? can not set the font size in IB.
+                            //self.temperature.font = UIFont.boldSystemFontOfSize(60)
+                            if (index == 1) {
+                                self.temp1.text = "\(temperature)°"
+                            }
+                            if (index == 2) {
+                                self.temp2.text = "\(temperature)°"
+                            }
+                            if (index == 3) {
+                                self.temp3.text = "\(temperature)°"
+                            }
+                            if (index == 4) {
+                                self.temp4.text = "\(temperature)°"
+                            }
+                        }
+                        var dateFormatter = NSDateFormatter()
+                        dateFormatter.dateFormat = "HH:mm"
+                        if let date = (perTime["dt"]? as? Double) {
+                            let thisDate = NSDate(timeIntervalSince1970: date)
+                            let forecastTime = dateFormatter.stringFromDate(thisDate)
+                            if (index==1) {
+                                self.time1.text = forecastTime
+                            }
+                            if (index==2) {
+                                self.time2.text = forecastTime
+                            }
+                            if (index==3) {
+                                self.time3.text = forecastTime
+                            }
+                            if (index==4) {
+                                self.time4.text = forecastTime
+                            }
+                        }
+                        if let weather = (perTime["weather"]? as? NSArray) {
+                            var condition = (weather[0] as NSDictionary)["id"] as Int
+                            var icon = (weather[0] as NSDictionary)["icon"] as String
+                            var nightTime = false
+                            if icon.rangeOfString("n") != nil{
+                                nightTime = true
+                            }
+                            self.updateWeatherIcon(condition, nightTime: nightTime, index: index)
+                            if (index == 4) {
+                                return
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.loading.text = "Weather info is not available!"
+    }
+复制代码
+然后，根据不同的解析结果，跟新当前的和后面几个小时的天气调用方法updateWeatherIcon、updatePictures更新天气图片（白天、晚上、天气）。示例工程中会有详细的实现。这里略去不提。
+
+这个时候，运行APP之后已经可以看到天气预报的主界面了。
+ 
+ 

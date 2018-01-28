@@ -1,0 +1,131 @@
+#pragma mark 上传图片
+-(void)Upload{
+    
+    UIImage * image = [UIImage imageNamed:@"iphone.png"];
+    AFHTTPRequestOperationManager *manager = [AFHTTPRequestOperationManager manager];
+    
+    NSData *imageData = UIImageJPEGRepresentation(image, 1);
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.dateFormat = @"yyyyMMddHHmmss";
+    NSString *str = [formatter stringFromDate:[NSDate date]];
+    NSString *fileName = [NSString stringWithFormat:@"%@", str];
+    NSDictionary *parameters = @{@"filename":fileName};
+    
+    //申明请求的数据是json类型
+    manager.requestSerializer=[AFJSONRequestSerializer serializer];
+    //如果报接受类型不一致请替换一致text/html或别的
+    manager.responseSerializer.acceptableContentTypes = [NSSet setWithObject:@"text/html"];
+    
+    [manager POST:@"http://192.168.40.10/IOSUPLOAD/WebForm1.aspx" parameters:parameters constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
+        
+        // 上传图片，以文件流的格式
+        [formData appendPartWithFileData:imageData name:@"img" fileName:fileName mimeType:@"image/png"];
+        
+    } success:^(AFHTTPRequestOperation *operation, id responseObject) {
+        
+        NSLog(@"%@",responseObject);
+        
+    } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+        
+    }];
+}
+
+#pragma mark 下载图片
+-(void)Download{
+    
+    NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    AFURLSessionManager *manager = [[AFURLSessionManager alloc] initWithSessionConfiguration:configuration];
+    
+    NSURL *URL = [NSURL URLWithString:@"http://192.168.40.10/FileDownload/WebForm1.aspx"];
+    NSURLRequest *request = [NSURLRequest requestWithURL:URL];
+    
+    NSURLSessionDownloadTask *downloadTask = [manager downloadTaskWithRequest:request progress:nil destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
+        NSURL *documentsDirectoryURL = [[NSFileManager defaultManager] URLForDirectory:NSDocumentDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:NO error:nil];
+        return [documentsDirectoryURL URLByAppendingPathComponent:[response suggestedFilename]];
+    } completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {
+        NSLog(@"File downloaded to: %@", filePath);
+    }];
+    [downloadTask resume];
+}
+
+4.下载数据进度监测
+#pragma mark - 下载数据
+
+- (void)downLoadData {? ? 
+
+_progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar];
+
+_progressView.frame = CGRectMake(10, 100, 300, 10);
+
+_progressView.backgroundColor = [UIColor redColor];
+
+[self.view addSubview:_progressView];
+
+
+
+//1.获取地址?? 
+
+NSString *path = @"http://imgcache.qq.com/club/item/avatar/zip/7/i87/all.zip";?? 
+
+//2.专门进行下载的管理类?? 
+
+AFURLSessionManager *sessionManager = [[AFURLSessionManager alloc] initWithSessionConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration]];? ? //默认传输的数据类型是二进制? ? 
+
+sessionManager.responseSerializer = [AFHTTPResponseSerializer serializer];? ??? 
+
+//模式是下载模式? ? 
+
+NSProgress *downloadProgress = nil;?? 
+
+/*? ? 第一个参数：将要下载文件的路径? ? 第二个参数：下载进度? ? 第三个参数：（block）：处理下载后文件保存的操作? ? 第四个参数（block）：下载完成的操作? ? */ 
+
+NSURLSessionDownloadTask *task = [sessionManager downloadTaskWithRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:path]] progress:&downloadProgress destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {? ? ?? 
+
+//沙盒的Documents路径? ? ? ? 
+
+NSString *downLoadPath = [NSString stringWithFormat:@"%@/Documents/downLoadData.zip",NSHomeDirectory()];? ? ? ? 
+
+/**? ? ? ? 区分:fileURLWithPath:与urlWithString:? ? ? ? 前者用于网络(AFNetWorking),后者用于(NSURLConnection等系统的数据请求类)? ? ? ? */? ? ? ? 
+
+//返回下载后保存文件的路径? ? ? ? 
+
+return [NSURL fileURLWithPath:downLoadPath];? ? 
+
+} completionHandler:^(NSURLResponse *response, NSURL *filePath, NSError *error) {? ? ? ? NSLog(@"filePah:%@",filePath);? ? } ];? ? 
+
+//开始下载? ? [task resume];? ? ? ? 
+
+//利用kvo监听下载进度? ? ?? 
+
+//利用kvo? 通过将当前类的对象设置成观察者(监听者),让当前类观察downloadProgress里面的fractionCompleted属性的变化? ? ? ? 
+
+//NSKeyValueObservingOptionNew:标记值的变化,这个是新值? ? //NSKeyValueObservingOptionOld:旧值? ? 
+
+[downloadProgress addObserver:self forKeyPath:@"fractionCompleted" options:NSKeyValueObservingOptionNew|NSKeyValueObservingOptionOld context:nil]; 
+
+? }
+
+
+
+#pragma mark - //kvo观察者触发的方法
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary*)change context:(void *)context {
+
+NSLog(@"keypath:%@,object:%@,change:%@",keyPath,object,change);
+
+//获取 进度变化
+
+float chanagefl = [[object valueForKeyPath:keyPath] floatValue];
+
+//? ? 
+
+_progressView.progress = chanagefl; //开始不能体现变化,是因为下载的过程是异步的,不能实时的获取值的变化.所以利用多线程的知识解决问题
+
+[[NSOperationQueue mainQueue] addOperationWithBlock:^{
+
+_progressView.progress = chanagefl;
+
+}];
+
+}
+
